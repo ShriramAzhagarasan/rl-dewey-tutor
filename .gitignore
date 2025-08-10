@@ -4,3 +4,4 @@ __pycache__/
 data/
 experiments/logs/
 
+.venv/
