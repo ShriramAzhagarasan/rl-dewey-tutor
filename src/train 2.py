@@ -16,13 +16,12 @@ import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.callbacks import BaseCallback, CallbackList
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import BaseCallback
 
 # Import our custom implementations
-from envs.tutor_env import TutorEnv
-from rl_dewey_tutor.agents.q_learning_agent import QLearningAgent
-from rl_dewey_tutor.agents.thompson_sampling import ThompsonSamplingExplorer
+from src.envs.tutor_env import TutorEnv
+from src.rl_dewey_tutor.agents.q_learning_agent import QLearningAgent
+from src.rl_dewey_tutor.agents.thompson_sampling import ThompsonSamplingExplorer
 
 class ExperimentLogger:
     """Comprehensive experiment logging and visualization"""
@@ -49,39 +48,32 @@ class ExperimentLogger:
         self.experiment_config['experiment_name'] = experiment_name
     
     def log_training_step(self, step: int, reward: float, loss: Optional[float] = None, 
-                         exploration_prob: Optional[float] = None, method: Optional[str] = None,
-                         metric: Optional[str] = None, **kwargs):
+                         exploration_prob: Optional[float] = None, **kwargs):
         """Log training step information"""
         log_entry = {
-            'step': int(step),
-            'reward': float(reward),
+            'step': step,
+            'reward': reward,
             'timestamp': time.time()
         }
         
         if loss is not None:
-            log_entry['loss'] = float(loss)
+            log_entry['loss'] = loss
         if exploration_prob is not None:
-            log_entry['exploration_probability'] = float(exploration_prob)
-        if method is not None:
-            log_entry['method'] = method
-        if metric is not None:
-            log_entry['metric'] = metric
+            log_entry['exploration_probability'] = exploration_prob
         
         log_entry.update(kwargs)
         self.training_log.append(log_entry)
     
     def log_evaluation(self, episode: int, total_reward: float, final_skill: float, 
-                      final_mastery: float, method: Optional[str] = None, **kwargs):
+                      final_mastery: float, **kwargs):
         """Log evaluation episode results"""
         log_entry = {
-            'episode': int(episode),
-            'total_reward': float(total_reward),
-            'final_skill': float(final_skill),
-            'final_mastery': float(final_mastery),
+            'episode': episode,
+            'total_reward': total_reward,
+            'final_skill': final_skill,
+            'final_mastery': final_mastery,
             'timestamp': time.time()
         }
-        if method is not None:
-            log_entry['method'] = method
         log_entry.update(kwargs)
         self.evaluation_log.append(log_entry)
     
@@ -119,64 +111,35 @@ class ExperimentLogger:
         
         # Reward over time
         if 'reward' in df.columns:
-            # PPO eval rewards
-            if 'method' in df.columns and 'metric' in df.columns:
-                dppo = df[(df['method'] == 'ppo') & (df['metric'] == 'eval_reward')]
-                if not dppo.empty:
-                    axes[0, 0].plot(dppo['step'], dppo['reward'], label='PPO eval reward', color='tab:blue')
-                # QL step rewards (rolling)
-                dql = df[(df['method'] == 'qlearning') & (df['metric'] == 'step_reward')]
-                if not dql.empty:
-                    dql_sorted = dql.sort_values('step')
-                    ma = dql_sorted['reward'].rolling(200).mean()
-                    axes[0, 0].plot(dql_sorted['step'], ma, label='QL reward (200-step MA)', color='tab:orange')
-            else:
-                axes[0, 0].plot(df['step'], df['reward'], alpha=0.3, label='reward')
-                if len(df) > 50:
-                    axes[0, 0].plot(df['step'], df['reward'].rolling(50).mean(), 'r-', linewidth=2, label='50-step MA')
-            axes[0, 0].set_title('Reward per Step (separated)')
+            axes[0, 0].plot(df['step'], df['reward'], alpha=0.6)
+            axes[0, 0].set_title('Reward per Step')
             axes[0, 0].set_xlabel('Training Step')
             axes[0, 0].set_ylabel('Reward')
-            axes[0, 0].legend()
+            
+            # Rolling average
+            if len(df) > 50:
+                rolling_avg = df['reward'].rolling(50).mean()
+                axes[0, 0].plot(df['step'], rolling_avg, 'r-', linewidth=2, label='50-step MA')
+                axes[0, 0].legend()
         
         # Loss over time
         if 'loss' in df.columns:
-            if 'method' in df.columns:
-                dql_loss = df[(df['method'] == 'qlearning') & df['loss'].notna()].sort_values('step')
-                if not dql_loss.empty:
-                    axes[0, 1].plot(dql_loss['step'], dql_loss['loss'], alpha=0.3, label='QL loss')
-            else:
-                axes[0, 1].plot(df['step'], df['loss'], alpha=0.3)
-            axes[0, 1].set_yscale('log')
-            axes[0, 1].set_title('Training Loss (log scale)')
+            axes[0, 1].plot(df['step'], df['loss'], alpha=0.6)
+            axes[0, 1].set_title('Training Loss')
             axes[0, 1].set_xlabel('Training Step')
             axes[0, 1].set_ylabel('Loss')
         
         # Exploration probability
         if 'exploration_probability' in df.columns:
-            if 'method' in df.columns:
-                dql_exp = df[(df['method'] == 'qlearning') & df['exploration_probability'].notna()].sort_values('step')
-                if not dql_exp.empty:
-                    axes[1, 0].plot(dql_exp['step'], dql_exp['exploration_probability'], alpha=0.6)
-            else:
-                axes[1, 0].plot(df['step'], df['exploration_probability'], alpha=0.6)
-            axes[1, 0].set_title('Exploration Probability (QL)')
+            axes[1, 0].plot(df['step'], df['exploration_probability'], alpha=0.6)
+            axes[1, 0].set_title('Exploration Probability')
             axes[1, 0].set_xlabel('Training Step')
             axes[1, 0].set_ylabel('Exploration Probability')
         
-        # Evaluation results (if populated)
+        # Evaluation results
         if self.evaluation_log:
             eval_df = pd.DataFrame(self.evaluation_log)
-            if 'method' in eval_df.columns:
-                ppo_eval = eval_df[eval_df['method'] == 'ppo']
-                ql_eval = eval_df[eval_df['method'] == 'qlearning']
-                if not ppo_eval.empty:
-                    axes[1, 1].plot(ppo_eval['episode'], ppo_eval['total_reward'], 'g-', alpha=0.7, label='PPO eval')
-                if not ql_eval.empty:
-                    axes[1, 1].plot(ql_eval['episode'], ql_eval['total_reward'], 'b-', alpha=0.5, label='QL episode')
-                axes[1, 1].legend()
-            else:
-                axes[1, 1].plot(eval_df['episode'], eval_df['total_reward'], 'g-', alpha=0.7)
+            axes[1, 1].plot(eval_df['episode'], eval_df['total_reward'], 'g-', alpha=0.7)
             axes[1, 1].set_title('Evaluation Performance')
             axes[1, 1].set_xlabel('Evaluation Episode')
             axes[1, 1].set_ylabel('Total Reward')
@@ -191,38 +154,25 @@ class ExperimentLogger:
 class TrainingCallback(BaseCallback):
     """Custom callback for training monitoring"""
     
-    def __init__(self, logger: 'ExperimentLogger', verbose: int = 0):
+    def __init__(self, logger: ExperimentLogger, verbose: int = 0):
         super().__init__(verbose)
-        self._logger = logger
+        self.logger = logger
         self.step_count = 0
     
-    @property
-    def logger(self):
-        return self._logger
-    
     def _on_step(self) -> bool:
-        # Keep simple; PPO logging handled by EvalCallback below
+        """Called after each step"""
+        if self.training_env is not None:
+            # Extract information from the environment
+            infos = self.training_env.get_attr('get_student_progress')[0]
+            if infos:
+                reward = infos.get('reward_history', [0])[-1] if infos.get('reward_history') else 0
+                self.logger.log_training_step(
+                    step=self.step_count,
+                    reward=reward
+                )
+        
         self.step_count += 1
         return True
-
-class LoggingEvalCallback(EvalCallback):
-    """EvalCallback that also mirrors eval results into our ExperimentLogger."""
-    def __init__(self, logger: 'ExperimentLogger', eval_env, n_eval_episodes=5, eval_freq=5000,
-                 deterministic=True, render=False):
-        super().__init__(eval_env, n_eval_episodes=n_eval_episodes, eval_freq=eval_freq,
-                         deterministic=deterministic, render=render)
-        self._logger = logger
-    
-    def _on_step(self) -> bool:
-        result = super()._on_step()
-        # If an evaluation just happened (every eval_freq calls), record mean reward
-        if self.eval_freq > 0 and (self.n_calls % self.eval_freq == 0):
-            mean_r = float(self.last_mean_reward) if hasattr(self, 'last_mean_reward') else None
-            if mean_r is not None:
-                self._logger.log_training_step(step=self.model.num_timesteps, reward=mean_r, method='ppo', metric='eval_reward')
-                # also mirror into evaluation log for the eval pane
-                self._logger.log_evaluation(episode=self.model.num_timesteps, total_reward=mean_r, final_skill=0.0, final_mastery=0.0, method='ppo')
-        return result
 
 def make_env(env_config: Dict[str, Any] = None):
     """Create and wrap environment"""
@@ -237,12 +187,11 @@ def train_ppo(env_config: Dict[str, Any], training_config: Dict[str, Any],
     """Train PPO agent"""
     print("Training PPO agent...")
     
-    # Create train and eval environments
+    # Create environment
     env = DummyVecEnv([lambda: make_env(env_config)])
-    eval_env = DummyVecEnv([lambda: make_env(env_config)])
     
     # PPO configuration
-    model = PPO(
+    ppo_config = (
         "MlpPolicy", env, verbose=1,
         gamma=training_config.get('gamma', 0.99),
         gae_lambda=training_config.get('gae_lambda', 0.95),
@@ -254,21 +203,15 @@ def train_ppo(env_config: Dict[str, Any], training_config: Dict[str, Any],
         tensorboard_log=logger.logs_dir
     )
     
-    # Callbacks: periodic evaluation that logs to ExperimentLogger
-    eval_callback = LoggingEvalCallback(
-        logger=logger,
-        eval_env=eval_env,
-        n_eval_episodes=training_config.get('eval_episodes', 5),
-        eval_freq=training_config.get('eval_freq_timesteps', 5000),
-        deterministic=True,
-        render=False,
-    )
-    callback_list = CallbackList([TrainingCallback(logger), eval_callback])
+    model = PPO(*ppo_config)
+    
+    # Training callback
+    callback = TrainingCallback(logger)
     
     # Train
     model.learn(
         total_timesteps=training_config.get('total_timesteps', 200_000),
-        callback=callback_list
+        callback=callback
     )
     
     # Save model
@@ -296,11 +239,10 @@ def train_q_learning(env_config: Dict[str, Any], training_config: Dict[str, Any]
         learning_rate=training_config.get('learning_rate', 0.001),
         gamma=training_config.get('gamma', 0.99),
         epsilon=training_config.get('epsilon', 1.0),
-        epsilon_decay=training_config.get('epsilon_decay', 0.997),
-        epsilon_min=training_config.get('epsilon_min', 0.05),
-        target_update_freq=training_config.get('target_update_freq', 500),
-        batch_size=training_config.get('batch_size', 128),
-        buffer_size=training_config.get('buffer_size', 50000)
+        epsilon_decay=training_config.get('epsilon_decay', 0.995),
+        epsilon_min=training_config.get('epsilon_min', 0.01),
+        batch_size=training_config.get('batch_size', 64),
+        buffer_size=training_config.get('buffer_size', 10000)
     )
     
     # Initialize Thompson Sampling explorer
@@ -314,15 +256,12 @@ def train_q_learning(env_config: Dict[str, Any], training_config: Dict[str, Any]
     total_episodes = training_config.get('total_episodes', 1000)
     eval_freq = training_config.get('eval_freq', 50)
     
-    # Get max_steps from the underlying environment
-    max_steps = env.unwrapped.max_steps if hasattr(env, 'unwrapped') else 50
-    
     for episode in range(total_episodes):
         obs, _ = env.reset()
         episode_reward = 0
         episode_losses = []
         
-        for step in range(max_steps):
+        for step in range(env.max_steps):
             # Get exploration probability
             exploration_prob = explorer.get_exploration_probability(obs)
             
@@ -346,12 +285,10 @@ def train_q_learning(env_config: Dict[str, Any], training_config: Dict[str, Any]
             
             # Log training step
             logger.log_training_step(
-                step=episode * max_steps + step,
+                step=episode * env.max_steps + step,
                 reward=reward,
                 loss=loss,
-                exploration_prob=exploration_prob,
-                method='qlearning',
-                metric='step_reward'
+                exploration_probability=exploration_prob
             )
             
             episode_reward += reward
@@ -368,12 +305,11 @@ def train_q_learning(env_config: Dict[str, Any], training_config: Dict[str, Any]
             episode=episode,
             total_reward=episode_reward,
             final_skill=final_skill,
-            final_mastery=final_mastery,
-            method='qlearning'
+            final_mastery=final_mastery
         )
         
         # Print progress
-        if (episode + 1) % 50 == 0:
+        if (episode + 1) % 100 == 0:
             avg_loss = np.mean(episode_losses) if episode_losses else 0
             print(f"Episode {episode + 1}/{total_episodes}, "
                   f"Reward: {episode_reward:.2f}, "
@@ -428,8 +364,6 @@ def main():
         'total_timesteps': 200_000,
         'total_episodes': 1000,
         'eval_freq': 50,
-        'eval_freq_timesteps': 5000,
-        'eval_episodes': 5,
         'exploration_strength': 1.0
     }
     
@@ -437,8 +371,8 @@ def main():
     if args.config and os.path.exists(args.config):
         with open(args.config, 'r') as f:
             custom_config = json.load(f)
-            env_config.update(custom_config.get('env_config', {}))
-            training_config.update(custom_config.get('training_config', {}))
+            env_config.update(custom_config.get('env', {}))
+            training_config.update(custom_config.get('training', {}))
     
     # Save experiment configuration
     logger.save_experiment_config({
@@ -450,10 +384,10 @@ def main():
     
     # Training
     if args.method in ["ppo", "both"]:
-        _ = train_ppo(env_config, training_config, logger)
+        ppo_model = train_ppo(env_config, training_config, logger)
     
     if args.method in ["qlearning", "both"]:
-        _ = train_q_learning(env_config, training_config, logger)
+        qlearning_model = train_q_learning(env_config, training_config, logger)
     
     # Save logs and generate plots
     logger.save_training_log()
@@ -468,4 +402,5 @@ def main():
     print(f"  - Models: {logger.models_dir}/")
 
 if __name__ == "__main__":
-    main() 
+    main()
+

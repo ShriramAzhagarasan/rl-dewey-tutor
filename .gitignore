@@ -1,19 +1,62 @@
+# Python cache
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+
+# Compiled extensions
+*.so
 *.pyd
-*.swp
+*.pyo
+
+# Virtual environments
 .venv/
-.env
-.envrc
-data/
-experiments/
-logs/
-results/
+venv/
+env/
+ENV/
+.conda/
+*.env
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Editors/IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Jupyter
 .ipynb_checkpoints/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs
 *.log
+logs/
+**/logs/**
+
+# Results and large artifacts (reproducible via scripts)
+results/
+experiments/
+
+# Models and checkpoints
+**/models/**
+*.zip
 *.pth
 *.pt
-*.onnx
+*.pkl
+
+# Test caches
+.pytest_cache/
+.mypy_cache/
+
+# Data (no raw datasets in repo)
+data/
+
+# Misc
+*.swp
+*.swo
 

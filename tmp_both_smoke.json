@@ -1,0 +1,14 @@
+{
+"training_config": {
+"total_timesteps": 50000,
+"total_episodes": 100,
+"n_steps": 2048,
+"batch_size": 256,
+"learning_rate": 0.001,
+"gae_lambda": 0.95,
+"ent_coef": 0.01,
+"clip_range": 0.2,
+"gamma": 0.99,
+"exploration_strength": 1.0
+}
+}

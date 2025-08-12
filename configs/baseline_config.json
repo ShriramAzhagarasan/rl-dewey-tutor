@@ -1,0 +1,33 @@
+{
+  "env_config": {
+    "n_topics": 3,
+    "n_difficulty_levels": 5,
+    "max_steps": 50,
+    "skill_decay_rate": 0.02,
+    "learning_rate_variance": 0.1
+  },
+  "training_config": {
+    "gamma": 0.99,
+    "learning_rate": 0.001,
+    "total_timesteps": 100000,
+    "total_episodes": 500,
+    "eval_freq": 25,
+    "exploration_strength": 1.0,
+    "gae_lambda": 0.95,
+    "n_steps": 2048,
+    "batch_size": 256,
+    "ent_coef": 0.01,
+    "clip_range": 0.2,
+    "epsilon": 1.0,
+    "epsilon_decay": 0.995,
+    "epsilon_min": 0.01,
+    "target_update_freq": 100,
+    "buffer_size": 10000
+  },
+  "experiment_config": {
+    "name": "baseline_experiment",
+    "description": "Baseline configuration for RL-Dewey-Tutor",
+    "tags": ["baseline", "3_topics", "5_difficulty_levels"],
+    "notes": "Standard configuration for initial experiments and comparisons"
+  }
+} 
