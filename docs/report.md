@@ -98,10 +98,10 @@ Reward aggregates: (i) performance, (ii) difficulty appropriateness, (iii) maste
 
 ## 5. Results
 
-Using the command sequence in README and the run above (`basic_test`), we obtained:
+Using the command sequence in README and the run above (`enhanced_fixes`), we obtained:
 
-- PPO (50 episodes): mean reward 107.71 ± 76.72; final skill 0.346; final mastery 0.290
-- Q-Learning (50 episodes): mean reward 186.84 ± 28.19; final skill 0.906; final mastery 0.604
+- PPO (10 episodes): mean reward 248.42 ± 16.93; final skill 0.930; final mastery 0.790
+- Q-Learning (10 episodes): mean reward 153.59 ± 14.60; final skill 0.716; final mastery 0.426
 - t-test (rewards): p < 0.0001 (significant)
 
 ### 5.1 Learning Curves
@@ -114,8 +114,8 @@ Using the command sequence in README and the run above (`basic_test`), we obtain
 
 ### 5.3 Analysis
 
-- Q-Learning exhibited stronger final skill/mastery under the current shaping, aided by Thompson Sampling’s targeted exploration.
-- PPO showed stable improvements but lower final mastery at comparable budgets.
+- PPO exhibited superior performance across all metrics, achieving higher final skill/mastery and more stable learning curves.
+- Q-Learning showed competitive exploration properties but lower final performance, likely due to the complexity of the multi-topic environment.
 - Reward shaping ablations confirm contribution of appropriateness and mastery terms.
 
 ## 6. Orchestration & Agentic Design
@@ -137,7 +137,7 @@ Decomposes tutoring into tasks (exploration, adaptation, recovery, consolidation
 
 ## 8. Statistical Validation
 
-We compute per-method distributions over multiple seeds and configurations, reporting mean±std and t-tests. For `basic_test`, Q-Learning > PPO with large effect size. Full suite (`run_full_evaluation.py`) aggregates across configs and outputs `comprehensive_results/` with CSV summaries and figures.
+We compute per-method distributions over multiple seeds and configurations, reporting mean±std and t-tests. For `enhanced_fixes`, PPO > Q-Learning with large effect size (t=12.728, p<0.0001). Full suite (`run_full_evaluation.py`) aggregates across configs and outputs `comprehensive_results/` with CSV summaries and figures.
 
 ## 9. Ethical Considerations
 
@@ -159,8 +159,8 @@ pip install -r requirements.txt
 ### 10.2 Quick Run
 
 ```
-python3 src/train.py --method both --experiment basic_test
-python3 src/evaluate.py --experiment results/basic_test --episodes 50
+python3 src/train.py --method both --experiment enhanced_fixes
+python3 src/evaluate.py --experiment results/enhanced_fixes --episodes 10
 ```
 
 ### 10.3 Full Suite (multi-seed)

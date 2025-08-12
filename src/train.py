@@ -354,6 +354,17 @@ def train_q_learning(env_config: Dict[str, Any], training_config: Dict[str, Any]
                 metric='step_reward'
             )
             
+            # Also log loss separately when available
+            if loss is not None:
+                logger.log_training_step(
+                    step=episode * max_steps + step,
+                    reward=0,  # Use 0 for loss entries
+                    loss=loss,
+                    exploration_prob=exploration_prob,
+                    method='qlearning',
+                    metric='loss'
+                )
+            
             episode_reward += reward
             obs = next_obs
             
@@ -371,6 +382,31 @@ def train_q_learning(env_config: Dict[str, Any], training_config: Dict[str, Any]
             final_mastery=final_mastery,
             method='qlearning'
         )
+        
+        # Also log evaluation data at regular intervals for better tracking
+        if episode % eval_freq == 0:
+            # Run a few evaluation episodes
+            eval_rewards = []
+            for _ in range(3):  # Quick evaluation
+                eval_obs, _ = env.reset()
+                eval_reward = 0
+                for _ in range(max_steps):
+                    eval_action = agent.select_action(eval_obs, training=False)
+                    eval_obs, eval_r, eval_done, eval_truncated, _ = env.step(eval_action)
+                    eval_reward += eval_r
+                    if eval_done or eval_truncated:
+                        break
+                eval_rewards.append(eval_reward)
+            
+            avg_eval_reward = np.mean(eval_rewards)
+            logger.log_training_step(
+                step=episode * max_steps,
+                reward=avg_eval_reward,
+                loss=None,
+                exploration_prob=explorer.get_exploration_probability(obs),
+                method='qlearning',
+                metric='eval_reward'
+            )
         
         # Print progress
         if (episode + 1) % 50 == 0:
