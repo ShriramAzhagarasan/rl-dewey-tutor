@@ -78,7 +78,7 @@ class ModelEvaluator:
             episode_performances = []
             
             for step in range(self.env.max_steps):
-                action, _ = model.predict(obs, deterministic=True)
+        action, _ = model.predict(obs, deterministic=True)
                 obs, reward, done, truncated, info = self.env.step(action)
                 
                 episode_reward += reward
@@ -147,8 +147,8 @@ class ModelEvaluator:
                 episode_actions.append(action)
                 episode_performances.append(info.get('performance', [0]))
                 
-                if done or truncated:
-                    break
+        if done or truncated:
+            break
             
             # Record episode results
             episode_rewards.append(episode_reward)

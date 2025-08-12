@@ -1,0 +1,18 @@
+{
+  "env_config": {
+    "n_topics": 2,
+    "n_difficulty_levels": 4,
+    "max_steps": 30,
+    "skill_decay_rate": 0.01,
+    "learning_rate_variance": 0.05
+  },
+  "training_config": {
+    "gamma": 0.95,
+    "learning_rate": 0.002,
+    "total_timesteps": 75000,
+    "total_episodes": 300,
+    "eval_freq": 20,
+    "exploration_strength": 0.8
+  },
+  "seed": 123
+}
